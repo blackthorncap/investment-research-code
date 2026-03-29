@@ -27,6 +27,12 @@ WATCHLIST = [
     "SGLN.L",   # iShares Physical Gold ETC (LSE) — was GLD
     "IDTL.L",   # iShares $ Treasury Bond 20+yr UCITS ETF (LSE) — was TLT
     "BTC-USD",  # Bitcoin (reference price, keep as-is)
+    # Norwegian large caps (Oslo Børs, .OL suffix)
+    "EQNR.OL",  # Equinor — Norwegian energy major
+    "DNB.OL",   # DNB — Norway's largest bank
+    "MOWI.OL",  # Mowi — world's largest salmon farmer
+    "TEL.OL",   # Telenor — Norwegian telecoms
+    "ORK.OL",   # Orkla — Norwegian consumer goods conglomerate
 ]
 
 SECTOR_ETFS = {

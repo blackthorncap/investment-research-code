@@ -41,6 +41,12 @@ UNIVERSE = {
     "SGLN.L": "Physical Gold",
     "IDTL.L": "US Treasury 20Y UCITS",
     "IPRP.L": "European Property UCITS",
+    # Norwegian Large Cap (Oslo Børs, .OL suffix)
+    "EQNR.OL": "Equinor",
+    "DNB.OL": "DNB",
+    "MOWI.OL": "Mowi",
+    "TEL.OL": "Telenor",
+    "ORK.OL": "Orkla",
 }
 
 PORTFOLIO_SIZE = 5  # Top picks
