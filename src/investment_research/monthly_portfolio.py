@@ -9,6 +9,7 @@ the reports repository under reports/YYYY/MM/portfolio.md
 import os
 import sys
 import argparse
+import json
 from datetime import datetime, date
 from pathlib import Path
 from calendar import monthrange
@@ -111,6 +112,91 @@ def score_tickers(data: dict) -> pd.DataFrame:
     return df
 
 
+HOLDINGS_FILENAME = "holdings.json"
+
+
+def load_previous_holdings(reports_dir: Path, report_date: date) -> dict | None:
+    """Load holdings from the previous month's report, if it exists."""
+    # Compute previous month
+    if report_date.month == 1:
+        prev_year, prev_month = report_date.year - 1, 12
+    else:
+        prev_year, prev_month = report_date.year, report_date.month - 1
+
+    prev_holdings_path = (
+        reports_dir / "reports" / f"{prev_year:04d}" / f"{prev_month:02d}" / HOLDINGS_FILENAME
+    )
+    if not prev_holdings_path.exists():
+        return None
+    try:
+        with open(prev_holdings_path) as f:
+            data = json.load(f)
+        return data.get("holdings", {})
+    except Exception as e:
+        print(f"Warning: could not load previous holdings: {e}", file=sys.stderr)
+        return None
+
+
+def save_holdings(top_df: pd.DataFrame, report_date: date, out_dir: Path) -> None:
+    """Persist this month's portfolio holdings as JSON for future comparison."""
+    n = len(top_df)
+    weight = round(1.0 / n, 6) if n > 0 else 0.0
+    holdings = {row.ticker: weight for row in top_df.itertuples()}
+    data = {
+        "date": report_date.strftime("%Y-%m"),
+        "holdings": holdings,
+    }
+    holdings_path = out_dir / HOLDINGS_FILENAME
+    with open(holdings_path, "w") as f:
+        json.dump(data, f, indent=2)
+
+
+def compute_portfolio_changes(
+    prev_holdings: dict | None,
+    top_df: pd.DataFrame,
+) -> dict:
+    """
+    Compare previous holdings with current top picks.
+
+    Returns a dict with keys:
+      - buy: list of (ticker, name, weight)
+      - sell: list of (ticker, weight_was)
+      - hold: list of (ticker, name, weight_was, weight_now, weight_delta)
+    """
+    n = len(top_df)
+    weight_now = round(1.0 / n, 6) if n > 0 else 0.0
+    current = {row.ticker: (row.name, weight_now) for row in top_df.itertuples()}
+
+    if prev_holdings is None:
+        # First run — everything is a buy
+        return {
+            "buy": [(t, name, w) for t, (name, w) in current.items()],
+            "sell": [],
+            "hold": [],
+            "first_run": True,
+        }
+
+    prev_set = set(prev_holdings.keys())
+    curr_set = set(current.keys())
+
+    buys = []
+    for t in sorted(curr_set - prev_set):
+        name, w = current[t]
+        buys.append((t, name, w))
+
+    sells = []
+    for t in sorted(prev_set - curr_set):
+        sells.append((t, prev_holdings[t]))
+
+    holds = []
+    for t in sorted(curr_set & prev_set):
+        name, w_now = current[t]
+        w_was = prev_holdings[t]
+        holds.append((t, name, w_was, w_now, w_now - w_was))
+
+    return {"buy": buys, "sell": sells, "hold": holds, "first_run": False}
+
+
 def generate_allocation_chart(top_df: pd.DataFrame, output_path: Path) -> None:
     """Equal-weight allocation pie chart."""
     n = len(top_df)
@@ -142,12 +228,66 @@ def generate_momentum_chart(df: pd.DataFrame, output_path: Path) -> None:
     plt.close()
 
 
+def build_portfolio_changes_section(changes: dict) -> list[str]:
+    """Render the Portfolio Changes section as markdown lines."""
+    lines = []
+    lines.append("## Portfolio Changes")
+    lines.append("")
+
+    if changes.get("first_run"):
+        lines.append(
+            "_No previous portfolio data found. This is the first run — all positions are new entries._"
+        )
+        lines.append("")
+
+    buys = changes.get("buy", [])
+    sells = changes.get("sell", [])
+    holds = changes.get("hold", [])
+
+    if buys:
+        lines.append("### Buy (new positions)")
+        lines.append("")
+        lines.append("| Ticker | Name | Weight |")
+        lines.append("|--------|------|--------|")
+        for ticker, name, weight in buys:
+            lines.append(f"| {ticker} | {name} | {weight * 100:.1f}% |")
+        lines.append("")
+
+    if sells:
+        lines.append("### Sell (exiting positions)")
+        lines.append("")
+        lines.append("| Ticker | Previous Weight |")
+        lines.append("|--------|----------------|")
+        for ticker, weight_was in sells:
+            lines.append(f"| {ticker} | {weight_was * 100:.1f}% |")
+        lines.append("")
+
+    if holds:
+        lines.append("### Hold (continuing positions)")
+        lines.append("")
+        lines.append("| Ticker | Name | Previous Weight | New Weight | Change |")
+        lines.append("|--------|------|----------------|-----------|--------|")
+        for ticker, name, w_was, w_now, delta in holds:
+            delta_str = f"{delta * 100:+.1f}%"
+            lines.append(
+                f"| {ticker} | {name} | {w_was * 100:.1f}% | {w_now * 100:.1f}% | {delta_str} |"
+            )
+        lines.append("")
+
+    if not buys and not sells and not holds:
+        lines.append("_No changes — portfolio is identical to last month._")
+        lines.append("")
+
+    return lines
+
+
 def build_portfolio_report(
     report_date: date,
     scored_df: pd.DataFrame,
     top_df: pd.DataFrame,
     alloc_chart: str,
     momentum_chart: str,
+    portfolio_changes: dict | None = None,
 ) -> str:
     lines = []
     month_str = report_date.strftime("%B %Y")
@@ -164,6 +304,9 @@ def build_portfolio_report(
         "All positions are equal-weighted."
     )
     lines.append("")
+
+    if portfolio_changes is not None:
+        lines.extend(build_portfolio_changes_section(portfolio_changes))
 
     lines.append("## Recommended Portfolio")
     lines.append("")
@@ -226,6 +369,13 @@ def main():
 
     print(f"Generating monthly portfolio for {report_date.strftime('%B %Y')}...")
 
+    print("Loading previous holdings for continuity comparison...")
+    prev_holdings = load_previous_holdings(reports_dir, report_date)
+    if prev_holdings:
+        print(f"  Found previous holdings: {list(prev_holdings.keys())}")
+    else:
+        print("  No previous holdings found — first-run mode.")
+
     print("Fetching 6-month market data...")
     data = fetch_monthly_data(list(UNIVERSE.keys()), months=6)
 
@@ -236,6 +386,8 @@ def main():
         sys.exit(1)
 
     top_df = scored_df.head(args.portfolio_size)
+
+    portfolio_changes = compute_portfolio_changes(prev_holdings, top_df)
 
     alloc_chart = out_dir / "portfolio_allocation.png"
     momentum_chart = out_dir / "momentum_scores.png"
@@ -250,11 +402,16 @@ def main():
         top_df,
         alloc_chart="portfolio_allocation.png",
         momentum_chart="momentum_scores.png",
+        portfolio_changes=portfolio_changes,
     )
 
     report_path = out_dir / "portfolio.md"
     report_path.write_text(report_md)
     print(f"Report written to {report_path}")
+
+    print("Saving holdings for next month's comparison...")
+    save_holdings(top_df, report_date, out_dir)
+    print(f"  Holdings saved to {out_dir / HOLDINGS_FILENAME}")
 
 
 if __name__ == "__main__":
