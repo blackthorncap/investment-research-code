@@ -23,23 +23,23 @@ import numpy as np
 
 # Universe of tickers to analyse for monthly portfolio
 UNIVERSE = {
-    # US Large Cap
-    "AAPL": "Apple",
-    "MSFT": "Microsoft",
-    "GOOGL": "Alphabet",
-    "AMZN": "Amazon",
-    "NVDA": "Nvidia",
-    "META": "Meta",
-    "BRK-B": "Berkshire Hathaway",
-    "JPM": "JPMorgan Chase",
-    "JNJ": "Johnson & Johnson",
-    "XOM": "ExxonMobil",
-    # ETFs
-    "SPY": "S&P 500",
-    "QQQ": "Nasdaq 100",
-    "GLD": "Gold",
-    "TLT": "20Y Treasuries",
-    "VNQ": "Real Estate",
+    # European Large Cap
+    "ASML.AS": "ASML",
+    "NOVN.SW": "Novartis",
+    "ROG.SW": "Roche",
+    "SAP.DE": "SAP",
+    "SHEL.L": "Shell",
+    "TTE.PA": "TotalEnergies",
+    "MC.PA": "LVMH",
+    "BNP.PA": "BNP Paribas",
+    "SIE.DE": "Siemens",
+    "ALV.DE": "Allianz",
+    # UCITS ETFs
+    "CSPX.L": "S&P 500 UCITS",
+    "EQQQ.L": "Nasdaq-100 UCITS",
+    "SGLN.L": "Physical Gold",
+    "IDTL.L": "US Treasury 20Y UCITS",
+    "IPRP.L": "European Property UCITS",
 }
 
 PORTFOLIO_SIZE = 5  # Top picks

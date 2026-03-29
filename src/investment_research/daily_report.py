@@ -21,21 +21,21 @@ import matplotlib.dates as mdates
 
 # Tickers to track in the daily report
 WATCHLIST = [
-    "SPY",   # S&P 500 ETF
-    "QQQ",   # Nasdaq 100 ETF
-    "DIA",   # Dow Jones ETF
-    "GLD",   # Gold ETF
-    "TLT",   # 20+ Year Treasury ETF
-    "BTC-USD",  # Bitcoin
+    "CSPX.L",   # iShares Core S&P 500 UCITS ETF (LSE) — was SPY
+    "EQQQ.L",   # Invesco EQQQ Nasdaq-100 UCITS ETF (LSE) — was QQQ
+    "IDVY.L",   # iShares Euro Dividend UCITS ETF (LSE) — was DIA
+    "SGLN.L",   # iShares Physical Gold ETC (LSE) — was GLD
+    "IDTL.L",   # iShares $ Treasury Bond 20+yr UCITS ETF (LSE) — was TLT
+    "BTC-USD",  # Bitcoin (reference price, keep as-is)
 ]
 
 SECTOR_ETFS = {
-    "Technology": "XLK",
-    "Healthcare": "XLV",
-    "Financials": "XLF",
-    "Energy": "XLE",
-    "Consumer Discretionary": "XLY",
-    "Utilities": "XLU",
+    "Technology": "EXV5.DE",          # iShares STOXX Europe 600 Technology
+    "Healthcare": "EXV4.DE",          # iShares STOXX Europe 600 Health Care
+    "Financials": "EXV1.DE",          # iShares STOXX Europe 600 Banks
+    "Energy": "EXV2.DE",              # iShares STOXX Europe 600 Oil & Gas
+    "Consumer Disc.": "EXH3.DE",      # iShares STOXX Europe 600 Retail
+    "Utilities": "EXV3.DE",           # iShares STOXX Europe 600 Utilities
 }
 
 
